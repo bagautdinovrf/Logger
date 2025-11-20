@@ -11,6 +11,11 @@ public:
     explicit Logger( int num);
     explicit Logger( uint num );
 
+    Logger( const Logger & ) = delete;
+    Logger &operator =( const Logger & ) = delete;
+    Logger( Logger &&other ) noexcept;
+    Logger &operator =( Logger &&other ) noexcept;
+
     Logger &operator <<(QString text);
     Logger &operator <<(int num);
 
