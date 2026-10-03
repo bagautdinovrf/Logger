@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QTextCodec>
+#include <utility>
 
 Logger::Logger() :
     mLogFile( new QFile() ),
@@ -41,9 +42,45 @@ Logger::Logger(uint num ) :
     writeLog(num);
 }
 
+Logger::Logger( Logger &&other ) noexcept :
+    mLogFile( other.mLogFile ),
+    mText( std::move( other.mText ) ),
+    mStream( other.mStream )
+{
+    other.mLogFile = nullptr;
+    other.mStream = false;
+    other.mText.clear();
+}
+
+Logger &Logger::operator =( Logger &&other ) noexcept
+{
+    if( this == &other )
+        return *this;
+
+    if( mStream && !mText.isEmpty() ) {
+        writeLog( mText );
+    }
+
+    if( mLogFile ) {
+        if( mLogFile->isOpen() )
+            mLogFile->close();
+        delete mLogFile;
+    }
+
+    mLogFile = other.mLogFile;
+    mText = std::move( other.mText );
+    mStream = other.mStream;
+
+    other.mLogFile = nullptr;
+    other.mStream = false;
+    other.mText.clear();
+
+    return *this;
+}
+
 Logger::~Logger()
 {
-    if(mStream) {
+    if(mStream && !mText.isEmpty()) {
         writeLog(mText);
     }
 
@@ -61,8 +98,10 @@ void Logger::init()
     QString path = QCoreApplication::applicationDirPath() + QDir::separator() + logDir ;
 
     if( !QDir().mkpath( path ) ) {
-        mLogFile->deleteLater();
-        mLogFile = nullptr;
+        if( mLogFile ) {
+            delete mLogFile;
+            mLogFile = nullptr;
+        }
         return;
     }
 
